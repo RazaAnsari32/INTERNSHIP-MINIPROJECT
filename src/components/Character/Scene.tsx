@@ -22,7 +22,9 @@ const Scene = () => {
   const [, setChar] = useState<THREE.Object3D | null>(null);
 
   useEffect(() => {
-    if (!canvasDiv.current) return;
+    if (!canvasDiv.current) {
+      return;
+    }
 
     const rect = canvasDiv.current.getBoundingClientRect();
 
@@ -34,24 +36,33 @@ const Scene = () => {
     const aspect = container.width / container.height;
     const scene = sceneRef.current;
 
-    // -----------------------------
+    // --------------------------------
     // Renderer
-    // -----------------------------
+    // --------------------------------
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
       antialias: true,
     });
 
-    renderer.setSize(container.width, container.height);
+    renderer.setSize(
+      container.width,
+      container.height
+    );
+
     renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+    renderer.toneMapping =
+      THREE.ACESFilmicToneMapping;
+
     renderer.toneMappingExposure = 1;
 
-    canvasDiv.current.appendChild(renderer.domElement);
+    canvasDiv.current.appendChild(
+      renderer.domElement
+    );
 
-    // -----------------------------
+    // --------------------------------
     // Camera
-    // -----------------------------
+    // --------------------------------
     const camera = new THREE.PerspectiveCamera(
       14.5,
       aspect,
@@ -63,40 +74,47 @@ const Scene = () => {
     camera.zoom = 1.1;
     camera.updateProjectionMatrix();
 
-    // -----------------------------
+    // --------------------------------
     // Character variables
-    // -----------------------------
+    // --------------------------------
+    let characterObject: THREE.Object3D | null =
+      null;
+
     let headBone: THREE.Object3D | null = null;
+
     let screenLight: THREE.Object3D | null = null;
+
     let mixer: THREE.AnimationMixer | undefined;
 
-    // -----------------------------
+    // --------------------------------
     // Clock
-    // -----------------------------
+    // --------------------------------
     const clock = new THREE.Clock();
 
-    // -----------------------------
+    // --------------------------------
     // Lighting
-    // -----------------------------
+    // --------------------------------
     const light = setLighting(scene);
 
-    // -----------------------------
+    // --------------------------------
     // Loading progress
-    // -----------------------------
-    const progress = setProgress((value) => setLoading(value));
+    // --------------------------------
+    const progress = setProgress((value) =>
+      setLoading(value)
+    );
 
-    // -----------------------------
+    // --------------------------------
     // Character loader
-    // -----------------------------
+    // --------------------------------
     const { loadCharacter } = setCharacter(
       renderer,
       scene,
       camera
     );
 
-    // -----------------------------
+    // --------------------------------
     // Mouse
-    // -----------------------------
+    // --------------------------------
     let mouse = {
       x: 0,
       y: 0,
@@ -107,40 +125,64 @@ const Scene = () => {
       y: 0.2,
     };
 
-    // -----------------------------
+    // --------------------------------
     // Mouse movement
-    // -----------------------------
+    // --------------------------------
     const onMouseMove = (event: MouseEvent) => {
       handleMouseMove(event, (x, y) => {
-        mouse = { x, y };
+        mouse = {
+          x,
+          y,
+        };
       });
     };
 
-    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener(
+      "mousemove",
+      onMouseMove
+    );
 
-    // -----------------------------
+    // --------------------------------
     // Touch handling
-    // -----------------------------
-    let debounce: ReturnType<typeof globalThis.setTimeout> | undefined;
+    // --------------------------------
+
+    // IMPORTANT:
+    // Browser window.setTimeout() returns number
+    // This fixes the Vercel TS2322 error.
+    let debounce: number | undefined;
 
     const onTouchMove = (event: TouchEvent) => {
       handleTouchMove(event, (x, y) => {
-        mouse = { x, y };
+        mouse = {
+          x,
+          y,
+        };
       });
     };
 
     const onTouchStart = (event: TouchEvent) => {
       const element = event.target as HTMLElement;
 
-      debounce = globalThis.setTimeout(() => {
-        element?.addEventListener("touchmove", onTouchMove);
+      debounce = window.setTimeout(() => {
+        element?.addEventListener(
+          "touchmove",
+          onTouchMove
+        );
       }, 200);
     };
 
     const onTouchEnd = () => {
       handleTouchEnd(
-        (x, y, interpolationX, interpolationY) => {
-          mouse = { x, y };
+        (
+          x,
+          y,
+          interpolationX,
+          interpolationY
+        ) => {
+          mouse = {
+            x,
+            y,
+          };
 
           interpolation = {
             x: interpolationX,
@@ -150,9 +192,9 @@ const Scene = () => {
       );
     };
 
-    // -----------------------------
+    // --------------------------------
     // Landing div
-    // -----------------------------
+    // --------------------------------
     const landingDiv =
       document.getElementById("landingDiv");
 
@@ -168,11 +210,13 @@ const Scene = () => {
       );
     }
 
-    // -----------------------------
+    // --------------------------------
     // Resize
-    // -----------------------------
+    // --------------------------------
     const onResize = () => {
-      if (!characterObject) return;
+      if (!characterObject) {
+        return;
+      }
 
       handleResize(
         renderer,
@@ -182,16 +226,18 @@ const Scene = () => {
       );
     };
 
-    // Character reference used by resize
-    let characterObject: THREE.Object3D | null = null;
+    window.addEventListener(
+      "resize",
+      onResize
+    );
 
-    window.addEventListener("resize", onResize);
-
-    // -----------------------------
+    // --------------------------------
     // Load character
-    // -----------------------------
+    // --------------------------------
     loadCharacter().then((gltf) => {
-      if (!gltf) return;
+      if (!gltf) {
+        return;
+      }
 
       const animations = setAnimations(gltf);
 
@@ -210,37 +256,43 @@ const Scene = () => {
 
       scene.add(characterObject);
 
+      // --------------------------------
       // Find head bone
+      // --------------------------------
       headBone =
         characterObject.getObjectByName(
           "spine006"
         ) || null;
 
+      // --------------------------------
       // Find screen light
+      // --------------------------------
       screenLight =
         characterObject.getObjectByName(
           "screenlight"
         ) || null;
 
-      // -----------------------------
+      // --------------------------------
       // Loading complete
-      // -----------------------------
+      // --------------------------------
       progress.loaded().then(() => {
-        globalThis.setTimeout(() => {
+        window.setTimeout(() => {
           light.turnOnLights();
           animations.startIntro();
         }, 2500);
       });
     });
 
-    // -----------------------------
+    // --------------------------------
     // Animation loop
-    // -----------------------------
+    // --------------------------------
     let animationFrameId: number;
 
     const animate = () => {
       animationFrameId =
-        window.requestAnimationFrame(animate);
+        window.requestAnimationFrame(
+          animate
+        );
 
       if (headBone) {
         handleHeadRotation(
@@ -252,7 +304,9 @@ const Scene = () => {
           THREE.MathUtils.lerp
         );
 
-        light.setPointLight(screenLight);
+        light.setPointLight(
+          screenLight
+        );
       }
 
       const delta = clock.getDelta();
@@ -261,29 +315,38 @@ const Scene = () => {
         mixer.update(delta);
       }
 
-      renderer.render(scene, camera);
+      renderer.render(
+        scene,
+        camera
+      );
     };
 
     animate();
 
-    // -----------------------------
+    // --------------------------------
     // Cleanup
-    // -----------------------------
+    // --------------------------------
     return () => {
-      // Cancel animation
+      // Stop animation frame
       window.cancelAnimationFrame(
         animationFrameId
       );
 
-      // Clear timeout
+      // Clear debounce timeout
       if (debounce !== undefined) {
-        globalThis.clearTimeout(debounce);
+        window.clearTimeout(debounce);
       }
 
       // Remove mouse listener
       document.removeEventListener(
         "mousemove",
         onMouseMove
+      );
+
+      // Remove resize listener
+      window.removeEventListener(
+        "resize",
+        onResize
       );
 
       // Remove touch listeners
@@ -299,12 +362,6 @@ const Scene = () => {
         );
       }
 
-      // Remove resize listener
-      window.removeEventListener(
-        "resize",
-        onResize
-      );
-
       // Remove touchmove listener
       if (landingDiv) {
         landingDiv.removeEventListener(
@@ -313,7 +370,7 @@ const Scene = () => {
         );
       }
 
-      // Clear Three.js scene
+      // Clear scene
       scene.clear();
 
       // Dispose renderer
